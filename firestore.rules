@@ -1,0 +1,98 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ログインして使える Google アカウント（許可リスト）。
+    // 各自のデータは users/{自分のuid}/... に分かれる。他の人の作品は、持ち主が共有したものだけ見られる。
+    //
+    // このファイルはひな形。実際のアドレスはリポジトリに含めない：
+    // `npm run rules` が allowlist.local.json（先頭は所有者）のアドレスを下のリストに入れて
+    // firestore.local.rules を作り、デプロイ・エミュレーターはそちらを使う（firebase.json）
+    function isAllowedUser() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [/* ALLOWLIST */ 'owner@example.com'];
+    }
+
+    function isOwner(uid) {
+      return isAllowedUser() && request.auth.uid == uid;
+    }
+
+    // ---- 作品の共有 ----
+    // 作品の文書の sharedWith: 共有相手のアドレスの一覧（閲覧のみ＋編集可）
+    //                editors:    そのうち編集もできる人
+    // 書き換えられるのは持ち主だけ。
+    function canViewWork(data) {
+      return isAllowedUser() && request.auth.token.email in data.get('sharedWith', []);
+    }
+    function canEditWork(data) {
+      return canViewWork(data) && request.auth.token.email in data.get('editors', []);
+    }
+    function workData(uid, workId) {
+      return get(/databases/$(database)/documents/users/$(uid)/works/$(workId)).data;
+    }
+    function canRead(uid, workId) {
+      return isOwner(uid) || canViewWork(workData(uid, workId));
+    }
+    function canWrite(uid, workId) {
+      return isOwner(uid) || canEditWork(workData(uid, workId));
+    }
+
+    // 共有の設定の形。持ち主のアプリのみが書くが、誤った形で保存されないよう確かめる
+    function validShares(d) {
+      return d.get('sharedWith', []) is list && d.get('sharedWith', []).size() <= 20
+        && d.get('editors', []) is list && d.get('editors', []).size() <= 20;
+    }
+
+    // タイトル・本文を書き換えるときは、編集の元にした版（baseUpdatedAt）が
+    // サーバー上の最新版（updatedAt）と一致していなければならない。
+    // 他端末の更新を知らない古い画面・オフライン中にたまった書き込みが、新しい版を上書きするのを防ぐ。
+    function isFreshTextEdit() {
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(['title', 'body'])
+        || request.resource.data.get('baseUpdatedAt', null) == resource.data.get('updatedAt', null);
+    }
+
+    // 一覧用の文書（episodes / notes）。本文は持たない（タイトルは本文の文書の写し）ので版の確認は不要。
+    // 旧版のアプリは本文をここへ書く。まだ移行していない（本文が残っている）文書に限り、版を確認して許す。
+    // 移行済み（本文が無い）文書へ本文を書き戻すのは拒否する：旧版は移行済みの本文を空として扱うため、
+    // 許すと空に近い内容で本文を上書きしてしまう
+    function isListMetaEdit() {
+      return !('body' in request.resource.data)
+        || ('body' in resource.data && isFreshTextEdit());
+    }
+
+    // 共有された作品の一覧（collection group の問い合わせ：sharedWith に自分のアドレスを含むもの）
+    match /{path=**}/works/{workId} {
+      allow read: if canViewWork(resource.data);
+    }
+
+    match /users/{uid} {
+      match /works/{workId} {
+        allow read: if isOwner(uid) || canViewWork(resource.data);
+        allow create: if isOwner(uid) && validShares(request.resource.data);
+        allow delete: if isOwner(uid);
+        // 編集可の共有相手は、更新日時と移行済みの印だけ書ける（名前の変更・共有の設定は持ち主だけ）
+        allow update: if (isOwner(uid) && validShares(request.resource.data))
+          || (canEditWork(resource.data)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'bodiesSplit']));
+
+        match /{sub}/{docId} {
+          allow read: if sub in ['episodes', 'notes', 'episodeBodies', 'noteBodies'] && canRead(uid, workId);
+          allow create, delete: if sub in ['episodes', 'notes', 'episodeBodies', 'noteBodies'] && canWrite(uid, workId);
+          allow update: if canWrite(uid, workId) && (
+            (sub in ['episodeBodies', 'noteBodies'] && isFreshTextEdit())
+            || (sub in ['episodes', 'notes'] && isListMetaEdit()));
+        }
+      }
+
+      match /thesaurus/{docId} {
+        allow read, create, delete: if isOwner(uid);
+        allow update: if isOwner(uid) && isFreshTextEdit();
+      }
+
+      match /meta/{docId} {
+        allow read, write: if isOwner(uid);
+      }
+    }
+  }
+}

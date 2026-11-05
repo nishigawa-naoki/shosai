@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm run lint)",
+      "PowerShell(Select-String *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Test-Path *)",
+      "PowerShell(git status *)",
+      "PowerShell(git log *)",
+      "Bash(npm run lint)",
+      "PowerShell(npm run build)",
+      "Bash(npm run build)",
+      "PowerShell(git add *)",
+      "Bash(git add *)",
+      "PowerShell(git commit *)",
+      "Bash(git commit *)",
+      "WebSearch",
+      "PowerShell(node e2e/sync.cjs)",
+      "Bash(node e2e/sync.cjs)",
+      "PowerShell(node e2e/smoke.cjs)",
+      "Bash(node e2e/smoke.cjs)",
+      "PowerShell(node e2e/smoke.cjs *)",
+      "Bash(node e2e/smoke.cjs *)",
+      "PowerShell(node e2e/autocorrect.cjs)",
+      "Bash(node e2e/autocorrect.cjs)",
+      "PowerShell(node e2e/migration.cjs)",
+      "Bash(node e2e/migration.cjs)"
+    ]
+  }
+}
