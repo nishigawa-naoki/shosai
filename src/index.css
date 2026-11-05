@@ -1443,6 +1443,15 @@ input.switch:disabled {
   font-size: 14px;
   overflow-wrap: anywhere;
 }
+/* 狭い画面ではアドレスを1行使い、権限の切り替えは下の行へ（アドレスが途中で折り返されないように） */
+@media (max-width: 480px) {
+  .share-email {
+    flex-basis: 100%;
+  }
+  .share-list .role-chips {
+    margin-right: auto;
+  }
+}
 .share-modal .empty-inline {
   margin-top: 16px;
 }

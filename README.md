@@ -9,6 +9,19 @@
 自分が日常的に使う道具として作り、実際にスマホと PC を行き来しながら執筆に使っている。
 「余計な入力補助をしない、書くことに集中できるエディタ」と「どの端末からでも、オフラインでも書けて、原稿を失わない同期」を目指した。
 
+## スクリーンショット
+
+<img src="docs/screenshots/works.png" alt="作品一覧（PC）。自分の作品と、共有された作品が並ぶ" width="760">
+
+| 執筆画面 | 章立て | 類語帳 |
+| :---: | :---: | :---: |
+| <img src="docs/screenshots/editor.png" alt="執筆画面" width="240"> | <img src="docs/screenshots/chapters.png" alt="章立てした話の一覧" width="240"> | <img src="docs/screenshots/synonyms.png" alt="執筆中に類語帳を呼び出したところ" width="240"> |
+| **編集の衝突の検出** | **作品の共有** | **設定メモ（Markdown・ダーク）** |
+| <img src="docs/screenshots/conflict.png" alt="他の端末の更新とぶつかった書き込みが拒否され、どちらの版を残すか選ぶ画面" width="240"> | <img src="docs/screenshots/share.png" alt="編集可・閲覧のみの権限で共有を設定するダイアログ" width="240"> | <img src="docs/screenshots/note-dark.png" alt="Markdown のプレビューをダークテーマで表示したキャラクターのメモ" width="240"> |
+
+- **編集の衝突の検出**：もう1台の端末がオフライン中に書いた内容が、先に保存された版とぶつかってサーバーに拒否されたところ。画面の内容は残したまま、どちらの版を残すかを選べる
+- 画像はすべて Firebase エミュレーター上のデモデータ（架空のアカウントと文章）で、`node e2e/screenshots.cjs` で撮り直せる
+
 ## アピールポイント
 
 ### 1. オフラインでも書けて、複数の端末で編集しても原稿を失わない同期
