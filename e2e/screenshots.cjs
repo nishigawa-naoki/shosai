@@ -14,11 +14,12 @@ const OUT = path.join(__dirname, '..', 'docs', 'screenshots')
 const AUTHOR = 'author@example.com'
 const FRIEND = 'friend@example.com'
 
-const root = path.join(__dirname, '..')
-const rulesFile = fs.existsSync(path.join(root, 'firestore.local.rules')) ? 'firestore.local.rules' : 'firestore.rules'
-const RULES = fs.readFileSync(path.join(root, rulesFile), 'utf8')
+// エミュレーターが使っているルール（firebase.json）。終わったらこの内容に戻す
+const rulesPath = path.join(__dirname, '..', 'firestore.local.rules')
+if (!fs.existsSync(rulesPath)) throw new Error('firestore.local.rules がありません。先に npm run rules を実行してください')
+const RULES = fs.readFileSync(rulesPath, 'utf8')
 const DEMO_RULES = RULES.replace(/(request\.auth\.token\.email in \[)/, `$1'${AUTHOR}', '${FRIEND}', `)
-if (DEMO_RULES === RULES) throw new Error(`${rulesFile} の許可リストが見つかりません`)
+if (DEMO_RULES === RULES) throw new Error('firestore.local.rules の許可リストが見つかりません')
 
 async function loadRules(content) {
   const res = await fetch(`${EMU}/emulator/v1/projects/${PROJECT}:securityRules`, {
