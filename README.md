@@ -172,11 +172,11 @@ firebase deploy --only firestore            # ルール・索引（デプロイ�
 PWA は各端末で旧版のアプリがしばらく動き続ける。旧版が満たせない条件をルールに足すときは、
 アプリを先に公開し、全端末が新版になってからルールを公開する。
 
-アプリは2つのサイトに同じものを公開している（`firebase.json` の `hosting`）。
+ホスティングのサイトは2つある（`firebase.json` の `hosting`）。
 
-- `shosai-app`：現在の URL（https://shosai-app.web.app）
-- `novel-editor-c94e8`：以前の URL。開くと新しい URL への移動を案内する。
-  端末内の未同期の変更は URL ごとに別なので、全端末が移り終えるまではアプリとして使えるまま残す
+- `shosai-app`：アプリ（https://shosai-app.web.app）
+- `novel-editor-c94e8`：以前の URL。新しい URL の同じパスへ転送するだけ（`hosting-redirect/`）。
+  プロジェクトの既定のサイトは削除できず、ログイン処理（`/__/auth/`）にも使うので、無効にはしない
 
 ## 自分の環境に立てる場合
 

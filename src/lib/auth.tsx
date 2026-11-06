@@ -41,33 +41,17 @@ export async function signIn() {
 const PENDING_WRITES_TIMEOUT_MS = 8000
 
 /**
- * この端末の同期の状態。
- * sent: 送信待ちの書き込みがすべてサーバーに届いた / unsaved: 端末に退避が残っている
- * （sent なのに退避が残っているのは、保存を拒否された・保存先が無くなった編集）
+ * ログアウトし、端末に残っている原稿のキャッシュ（IndexedDB）も消す。
+ * 未同期の変更が送り切れない場合（オフラインなど）は確認してから進める。
+ * 戻り値 false: 利用者が中止した
  */
-export async function syncState(): Promise<{ sent: boolean; unsaved: boolean }> {
+export async function logOut(): Promise<boolean> {
   const sent = await Promise.race([
     waitForPendingWrites(db).then(() => true),
     new Promise<boolean>((r) => setTimeout(() => r(false), PENDING_WRITES_TIMEOUT_MS)),
   ])
-  return { sent, unsaved: hasUnsavedBackups() }
-}
-
-/** この端末の変更がすべてサーバーに届いているか（送信待ちの書き込みも、保存を拒否された退避も無い） */
-export async function isFullySynced(): Promise<boolean> {
-  const { sent, unsaved } = await syncState()
-  return sent && !unsaved
-}
-
-/**
- * ログアウトし、端末に残っている原稿のキャッシュ（IndexedDB）も消す。
- * 未同期の変更が送り切れない場合（オフラインなど）は確認してから進める。
- * next を指定すると、消した後に再読み込みではなくその URL へ移る。
- * 戻り値 false: 利用者が中止した
- */
-export async function logOut(next?: string): Promise<boolean> {
   if (
-    !(await isFullySynced()) &&
+    (!sent || hasUnsavedBackups()) &&
     !confirm('まだサーバーに保存できていない変更があります。\nこのままログアウトすると、その変更は失われます。続けますか？')
   ) {
     return false
@@ -83,7 +67,6 @@ export async function logOut(next?: string): Promise<boolean> {
     console.error(e)
     alert('端末内のデータを消去できませんでした。このアプリを開いている他のタブを閉じてから、もう一度開き直してください。')
   }
-  if (next) location.assign(next)
-  else location.reload()
+  location.reload()
   return true
 }
