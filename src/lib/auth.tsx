@@ -40,13 +40,23 @@ export async function signIn() {
 
 const PENDING_WRITES_TIMEOUT_MS = 8000
 
-/** この端末の変更がすべてサーバーに届いているか（送信待ちの書き込みも、保存を拒否された退避も無い） */
-export async function isFullySynced(): Promise<boolean> {
+/**
+ * この端末の同期の状態。
+ * sent: 送信待ちの書き込みがすべてサーバーに届いた / unsaved: 端末に退避が残っている
+ * （sent なのに退避が残っているのは、保存を拒否された・保存先が無くなった編集）
+ */
+export async function syncState(): Promise<{ sent: boolean; unsaved: boolean }> {
   const sent = await Promise.race([
     waitForPendingWrites(db).then(() => true),
     new Promise<boolean>((r) => setTimeout(() => r(false), PENDING_WRITES_TIMEOUT_MS)),
   ])
-  return sent && !hasUnsavedBackups()
+  return { sent, unsaved: hasUnsavedBackups() }
+}
+
+/** この端末の変更がすべてサーバーに届いているか（送信待ちの書き込みも、保存を拒否された退避も無い） */
+export async function isFullySynced(): Promise<boolean> {
+  const { sent, unsaved } = await syncState()
+  return sent && !unsaved
 }
 
 /**

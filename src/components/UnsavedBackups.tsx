@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { backupsUnder, removeBackupsUnder } from '../lib/useAutosave'
+import { backupsUnder, discardBackup } from '../lib/useAutosave'
 
 /**
  * 保存できなかった編集内容（端末に退避したもの）のうち、path（とその配下）の分を見せ、コピー・破棄できるようにする。
  * 共有が解除された・他の端末で削除されたなどで元の画面を開けなくなった退避は、ここでしか片付けられない
  */
-export default function UnsavedBackups({ path, onCleared }: { path: string; onCleared?: () => void }) {
+export default function UnsavedBackups({ path }: { path: string }) {
   const [unsaved, setUnsaved] = useState<ReturnType<typeof backupsUnder>>([])
   // 編集画面が外れるときの保存（退避の書き込み）は、この部品の描画より後に走るので、その後で読む
   useEffect(() => {
@@ -35,9 +35,9 @@ export default function UnsavedBackups({ path, onCleared }: { path: string; onCl
           className="danger"
           onClick={() => {
             if (!confirm('保存できなかった編集内容を捨てます。')) return
-            unsaved.forEach((u) => removeBackupsUnder(u.path))
-            setUnsaved([])
-            onCleared?.()
+            // 表示した版だけを消す（表示した後に書き足された新しい版は残す）
+            unsaved.forEach((u) => discardBackup(u.path, u.updatedAt))
+            setUnsaved(backupsUnder(path))
           }}
         >
           捨てる

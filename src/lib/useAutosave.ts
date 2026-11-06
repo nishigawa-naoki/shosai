@@ -76,15 +76,20 @@ export function removeBackupsUnder(pathPrefix: string) {
 }
 
 /** 文書（とその配下）の退避の一覧。共有が解除されて開けなくなった作品の、保存できなかった編集を見せるため */
-export function backupsUnder(pathPrefix: string): (TitleBody & { path: string })[] {
+export function backupsUnder(pathPrefix: string): (TitleBody & { path: string; updatedAt: number })[] {
   const key = BACKUP_PREFIX + pathPrefix
   return backupKeys()
     .filter((k) => k === key || k.startsWith(key + '/'))
     .flatMap((k) => {
       const path = k.slice(BACKUP_PREFIX.length)
       const b = readBackup(path)
-      return b ? [{ path, title: b.title, body: b.body }] : []
+      return b ? [{ path, title: b.title, body: b.body, updatedAt: b.updatedAt }] : []
     })
+}
+
+/** 表示した版の退避だけを消す（その後に別の画面で書き足された新しい版は残す） */
+export function discardBackup(path: string, updatedAt: number) {
+  removeBackup(path, updatedAt)
 }
 
 function describeError(e: unknown): string {
@@ -180,6 +185,9 @@ export function useAutosave(path: string, save: (v: TextSave) => Promise<void>) 
     setMissing(false)
     return onSnapshot(doc(db, path), { includeMetadataChanges: true }, (snap) => {
       if (!snap.exists()) {
+        // 編集中に他の端末で削除された：待ち時間中の入力を今すぐ退避に書く（送信は拒否されるが、
+        // 「見つかりませんでした」の画面に保存できなかった内容として出せるよう、描画より先に残す）
+        flush()
         setMissing(true)
         setMissingOffline(snap.metadata.fromCache)
         return

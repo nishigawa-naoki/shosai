@@ -638,6 +638,9 @@ export function useListMetaSync<T extends { title: string }>(write: (m: T) => vo
    */
   const forget = useCallback(() => {
     last.current = null
+    // 拒否された版の情報は書かない（「サーバーの版を読み込む」を選んだ後、離脱時に捨てた版の題名を書いてしまう）。
+    // 「この画面の版で保存」なら保存し直す時に take で入れ直される
+    latest.current = null
   }, [])
 
   // 毎回新しいオブジェクトを返すと、これを使う保存処理が描画のたびに作り直される

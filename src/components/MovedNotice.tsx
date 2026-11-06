@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { isFullySynced, logOut, useAuth } from '../lib/auth'
+import { logOut, syncState, useAuth } from '../lib/auth'
 import UnsavedBackups from './UnsavedBackups'
 
 /** 以前の URL。ここで開いたときだけ、新しい URL への移動を案内する */
@@ -22,9 +22,16 @@ export default function MovedNotice() {
   const move = async () => {
     setChecking(true)
     try {
-      if (!(await isFullySynced())) {
+      const { sent, unsaved } = await syncState()
+      if (!sent) {
+        // 送信待ち：オンラインで待てば届く。ここでは捨てさせない（届いた後に衝突すれば、元の画面で解決できる）
+        alert('この端末に、まだサーバーに送信できていない変更があります。\nオンラインの状態で少し待ってから、もう一度押してください。')
+        return
+      }
+      if (unsaved) {
+        // 送信は済んだのに退避が残っている＝保存を拒否された、または保存先が無くなった編集
         alert(
-          'この端末に、まだサーバーに保存できていない変更があります。\nオンラインの状態で、編集した画面を開いて「同期済み」になってから、もう一度押してください。\n（元の画面を開けない変更は、案内の下に表示します。控えるか捨ててください）',
+          'サーバーに保存できなかった変更がこの端末に残っています。\n編集した画面を開いて解決するか、案内の下に表示する内容を控える・捨ててから、もう一度押してください。',
         )
         setShowUnsaved(true)
         return

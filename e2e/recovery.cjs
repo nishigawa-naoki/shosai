@@ -5,6 +5,22 @@
 const { launch, ownerEmail } = require('./browser.cjs')
 const BASE = process.env.BASE_URL ?? 'http://localhost:5199'
 const EMAIL = ownerEmail()
+const PROJECT = 'demo-novel'
+const FS = `http://127.0.0.1:8080/v1/projects/${PROJECT}/databases/(default)/documents`
+
+/** エミュレーターの管理者権限で文書を消す（もう1台の端末からの削除を、間を置かずに起こすため） */
+async function adminDelete(docPath) {
+  const res = await fetch(`${FS}/${docPath}`, { method: 'DELETE', headers: { Authorization: 'Bearer owner' } })
+  if (!res.ok) throw new Error(`${docPath}: ${res.status}`)
+}
+async function uidOf(email) {
+  const res = await fetch(`http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/projects/${PROJECT}/accounts:query`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer owner', 'Content-Type': 'application/json' },
+    body: JSON.stringify({ returnUserInfo: true }),
+  })
+  return (await res.json()).userInfo.find((u) => u.email === email).localId
+}
 
 let failures = 0
 function check(label, ok, detail = '') {
@@ -74,18 +90,52 @@ async function typeAtEnd(p, s) {
     await A.context().setOffline(true)
     await typeAtEnd(A, '（削除直前の入力）')
     await A.waitForTimeout(1500)
+    // setOffline は張られたままの通信を切らないことがあり、そのときは入力がもう保存されている（退避が消える）。
+    // その回は「保存できなかった入力」が無いので、この確認の対象外にする
+    const pending = await A.evaluate(() => Object.keys(localStorage).some((k) => k.startsWith('novel-editor:unsaved:')))
     await B.goto(epUrl)
     await B.waitForSelector('.cm-content')
     await B.click('button[aria-label="メニュー"]')
     await B.click('text=この話を削除')
     await B.waitForURL(/\/works\/[^/]+$/)
+    // B の削除がサーバーに届いてから A をオンラインに戻す（先に戻すと A の入力が先に保存され、その後で削除される）
+    {
+      const [, , wId, , eId] = new URL(epUrl).pathname.split('/')
+      const bodyPath = `users/${await uidOf(EMAIL)}/works/${wId}/episodeBodies/${eId}`
+      for (let i = 0; i < 50; i++) {
+        const res = await fetch(`${FS}/${bodyPath}`, { headers: { Authorization: 'Bearer owner' } })
+        if (res.status === 404) break
+        await new Promise((r) => setTimeout(r, 200))
+      }
+    }
     await A.context().setOffline(false)
     await A.waitForSelector('text=見つかりませんでした', { timeout: 30000 })
+    if (pending) {
+      await A.waitForSelector('text=保存できなかった編集内容', { timeout: 5000 }).catch(() => {})
+      check('削除された文書の未保存の入力が案内される', !!(await A.$('text=保存できなかった編集内容')))
+      await A.click('.problem-banner button:has-text("捨てる")')
+      const left = await A.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('novel-editor:unsaved:')))
+      check('捨てると退避が消える', left.length === 0, left)
+    } else {
+      console.log('SKIP  削除された文書の未保存の入力（オフラインにできず、入力が先に保存された）')
+    }
+
+    // ---- オンラインのまま、保存の待ち時間中に削除が届いた ----
+    await A.goto(workUrl)
+    await A.click('text=話を追加')
+    await A.waitForURL(/episodes/)
+    await A.waitForSelector('.cm-content')
+    await waitSynced(A)
+    const [, , workId, , epId] = new URL(A.url()).pathname.split('/')
+    const uid = await uidOf(EMAIL)
+    await typeAtEnd(A, '待ち時間中の入力')
+    // 自動保存（入力が止まって 800ms 後）より前に、他の端末で削除されたことにする
+    await adminDelete(`users/${uid}/works/${workId}/episodes/${epId}`)
+    await adminDelete(`users/${uid}/works/${workId}/episodeBodies/${epId}`)
+    await A.waitForSelector('text=見つかりませんでした', { timeout: 30000 })
     await A.waitForSelector('text=保存できなかった編集内容', { timeout: 5000 }).catch(() => {})
-    check('削除された文書の未保存の入力が案内される', !!(await A.$('text=保存できなかった編集内容')))
+    check('保存の待ち時間中に削除されても、直前の入力が案内される', !!(await A.$('text=保存できなかった編集内容')))
     await A.click('.problem-banner button:has-text("捨てる")')
-    const left = await A.evaluate(() => Object.keys(localStorage).filter((k) => k.startsWith('novel-editor:unsaved:')))
-    check('捨てると退避が消える', left.length === 0, left)
 
     // ---- Markdown のリンク ----
     await A.goto(workUrl + '?tab=notes')
