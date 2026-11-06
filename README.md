@@ -175,8 +175,11 @@ PWA は各端末で旧版のアプリがしばらく動き続ける。旧版が�
 ホスティングのサイトは2つある（`firebase.json` の `hosting`）。
 
 - `shosai-app`：アプリ（https://shosai-app.web.app）
-- `novel-editor-c94e8`：以前の URL。新しい URL の同じパスへ転送するだけ（`hosting-redirect/`）。
+- `novel-editor-c94e8`：以前の URL。新しい URL の同じパスへ移すだけ（`hosting-redirect/`）。
   プロジェクトの既定のサイトは削除できず、ログイン処理（`/__/auth/`）にも使うので、無効にはしない
+  - どのパスでも、新しい URL へ移すページを返す（サーバーの 301 にはしない。ブラウザに記憶され、以前の URL に戻せなくなるため）
+  - `sw.js` は、以前の URL にインストールされたアプリの Service Worker を解除する。
+    旧版の Service Worker は端末内に保存したアプリを表示するので、解除しないと転送が効かない
 
 ## 自分の環境に立てる場合
 
