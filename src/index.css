@@ -1507,10 +1507,6 @@ input.switch:disabled {
 .moved-notice p {
   margin: 0 0 8px;
 }
-.moved-notice a {
-  color: var(--accent);
-  font-weight: 600;
-}
 .moved-actions {
   display: flex;
   justify-content: flex-end;
