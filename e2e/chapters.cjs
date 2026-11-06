@@ -121,6 +121,9 @@ async function waitRows(p, expected) {
   for (let n = 0; n < 3; n++) {
     await page.click('section .list > li.chapter-row >> nth=0 >> button[aria-label="この章の最後に話を追加"]')
     await page.waitForURL(/episodes/)
+    // 追加の書き込みがサーバーに届いてから読み込み直す（届く前にページごと読み込み直すと、書き込みが失われることがある）
+    await page.waitForSelector('.cm-content')
+    await page.waitForFunction(() => document.querySelector('.status')?.textContent === '同期済み', null, { timeout: 20000 })
     await page.goto(workUrl)
     await page.waitForSelector('text=第三章')
   }

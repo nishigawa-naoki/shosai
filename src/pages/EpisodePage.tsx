@@ -30,10 +30,17 @@ export default function EpisodePage() {
   )
   const save = useCallback(
     (v: TextSave) => {
-      const touchWork = v.updatedAt - lastTouch.current >= TOUCH_WORK_INTERVAL_MS
+      const prevTouch = lastTouch.current
+      const touchWork = v.updatedAt - prevTouch >= TOUCH_WORK_INTERVAL_MS
       if (touchWork) lastTouch.current = v.updatedAt
       const m = { title: v.title, charCount: countChars(v.body) }
-      return saveEpisode(uid, workId, episodeId, v, { meta: meta.take(m, v.updatedAt) ? m : null, touchWork })
+      const withMeta = meta.take(m, v.updatedAt)
+      return saveEpisode(uid, workId, episodeId, v, { meta: withMeta ? m : null, touchWork }).catch((e) => {
+        // 一括書き込みごと拒否された：一覧の情報・作品の更新日時は書けていないので、次の保存で書き直す
+        if (withMeta) meta.forget()
+        if (touchWork) lastTouch.current = prevTouch
+        throw e
+      })
     },
     [uid, workId, episodeId, meta],
   )

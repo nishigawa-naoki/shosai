@@ -18,7 +18,7 @@ import {
   type DocumentData,
   type DocumentReference,
 } from 'firebase/firestore'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { db } from './firebase'
 import { AUTOCORRECT_DEFAULTS, type AutocorrectOptions } from './autocorrectRules'
 import type { DocFormat } from './markdown'
@@ -264,7 +264,19 @@ export function useSettings(uid: string) {
   /** 変えた項目だけを送る（merge なので他の項目・他端末で変えた項目は上書きしない） */
   const update = (patch: SettingsPatch) => {
     setLocal((l) => ({ ...l, ...patch, autocorrect: { ...l.autocorrect, ...patch.autocorrect } }))
-    setDoc(doc(db, settingsPath(uid)), patch, { merge: true }).catch((e) => console.error(e))
+    setDoc(doc(db, settingsPath(uid)), patch, { merge: true })
+      // 届いたら手元の上書きを外す（以後は他の端末での変更もそのまま反映する）。その間に変えた項目は残す
+      .then(() =>
+        setLocal((l) => {
+          const next: SettingsPatch = { ...l, autocorrect: { ...l.autocorrect } }
+          if (patch.markdownAssist !== undefined && l.markdownAssist === patch.markdownAssist) delete next.markdownAssist
+          for (const [k, v] of Object.entries(patch.autocorrect ?? {}) as [keyof AutocorrectOptions, boolean][]) {
+            if (next.autocorrect?.[k] === v) delete next.autocorrect[k]
+          }
+          return next
+        }),
+      )
+      .catch((e) => console.error(e))
   }
   return { settings, update, loading }
 }
@@ -291,12 +303,13 @@ export function renameWork(uid: string, workId: string, title: string) {
 }
 
 export async function deleteWork(uid: string, workId: string) {
-  const [eps, epBodies, notes, noteBodies] = await Promise.all(
-    [episodesPath, episodeBodiesPath, notesPath, noteBodiesPath].map((p) => getDocs(collection(db, p(uid, workId)))),
+  // 本文の文書は一覧用の文書と同じ id なので、一覧用だけを読んでパスを組み立てる
+  // （本文まで読むと、長編では読み取り件数と通信量がかさむ）
+  const [eps, notes] = await Promise.all(
+    [episodesPath, notesPath].map((p) => getDocs(collection(db, p(uid, workId)))),
   )
-  // オフラインでは本文の文書は読み込み済みの分しか取れないので、一覧用の文書（全件キャッシュ済み）の id からも組み立てる
   const paths = new Set<string>([
-    ...[eps, epBodies, notes, noteBodies].flatMap((s) => s.docs.map((d) => d.ref.path)),
+    ...[eps, notes].flatMap((s) => s.docs.map((d) => d.ref.path)),
     // 章の見出しは本文の文書を持たない（無い文書の削除も書き込みとして数えられる）
     ...eps.docs.filter((d) => d.data().kind !== 'chapter').map((d) => episodeBodyPath(uid, workId, d.id)),
     ...notes.docs.map((d) => noteBodyPath(uid, workId, d.id)),
@@ -619,7 +632,16 @@ export function useListMetaSync<T extends { title: string }>(write: (m: T) => vo
     latest.current = null
   }, [])
 
-  return { take, cancel }
+  /**
+   * take で含めた書き込みが拒否・失敗したときに呼ぶ。書いたことにしたままだと、
+   * 衝突を解決して保存し直しても一覧の情報が書かれず、本文とずれたまま残る
+   */
+  const forget = useCallback(() => {
+    last.current = null
+  }, [])
+
+  // 毎回新しいオブジェクトを返すと、これを使う保存処理が描画のたびに作り直される
+  return useMemo(() => ({ take, cancel, forget }), [take, cancel, forget])
 }
 
 export function createThesaurusEntry(uid: string, title = ''): string {

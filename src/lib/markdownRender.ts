@@ -2,9 +2,19 @@
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 
+/** アプリと別の場所を指すリンクか。`//example.com` のようなスキーム省略の URL も外部として扱う */
+function isExternal(href: string) {
+  try {
+    return new URL(href, location.href).origin !== location.origin
+  } catch {
+    return false
+  }
+}
+
 // 外部リンクは別タブ（PWA ではアプリ内ブラウザ）で開き、アプリ自体が遷移しないようにする
 DOMPurify.addHook('afterSanitizeAttributes', (node) => {
-  if (node.tagName === 'A' && /^https?:/i.test(node.getAttribute('href') ?? '')) {
+  const href = node.getAttribute('href')
+  if (node.tagName === 'A' && href && isExternal(href)) {
     node.setAttribute('target', '_blank')
     node.setAttribute('rel', 'noopener noreferrer')
   }

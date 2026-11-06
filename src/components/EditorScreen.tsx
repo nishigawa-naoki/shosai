@@ -11,6 +11,7 @@ import { isChunkLoadError, reloadOnceForUpdate } from './ChunkErrorBoundary'
 import Editor, { type EditorApi } from './Editor'
 import Icon from './Icon'
 import SynonymPanel from './SynonymPanel'
+import UnsavedBackups from './UnsavedBackups'
 
 type Props = {
   doc: ReturnType<typeof useAutosave>
@@ -104,6 +105,8 @@ export default function EditorScreen({
             ? 'オフラインのため、この端末ではまだ読み込めません。オンラインのときに開いてください。'
             : '見つかりませんでした。'}
         </p>
+        {/* 編集中に他の端末で削除されると、直前の入力は保存できずに端末に残る。ここで控える・捨てる */}
+        {!doc.missingOffline && <UnsavedBackups path={doc.path} />}
         <Link to={backTo}>戻る</Link>
       </div>
     )

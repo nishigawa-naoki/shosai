@@ -30,7 +30,13 @@ function writeBackup(path: string, v: Backup) {
   try {
     localStorage.setItem(BACKUP_PREFIX + path, JSON.stringify(v))
   } catch {
-    /* 容量超過などで残せなくても保存処理は続ける */
+    // 容量超過などで残せなくても保存処理は続ける。
+    // ひとつ前の版の退避が残っていると、開き直したときにそちらを新しい版と取り違えるので消す
+    try {
+      localStorage.removeItem(BACKUP_PREFIX + path)
+    } catch {
+      /* noop */
+    }
   }
 }
 

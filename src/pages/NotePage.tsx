@@ -36,7 +36,12 @@ export default function NotePage() {
   const save = useCallback(
     (v: TextSave) => {
       const m = { title: v.title, preview: makePreview(v.body) }
-      return saveNoteText(uid, workId, noteId, v, meta.take(m, v.updatedAt) ? m : null)
+      const withMeta = meta.take(m, v.updatedAt)
+      return saveNoteText(uid, workId, noteId, v, withMeta ? m : null).catch((e) => {
+        // 一括書き込みごと拒否された：一覧の情報は書けていないので、次の保存で書き直す
+        if (withMeta) meta.forget()
+        throw e
+      })
     },
     [uid, workId, noteId, meta],
   )

@@ -1,8 +1,8 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { createContext, useContext, useMemo } from 'react'
 import { Link, Outlet, useParams } from 'react-router-dom'
+import UnsavedBackups from '../components/UnsavedBackups'
 import { useAuth } from './auth'
 import { roleOf, useDocument, workPath, type Work, type WorkRole } from './db'
-import { backupsUnder, removeBackupsUnder } from './useAutosave'
 
 /**
  * 作品の画面（作品・話・メモ）で共通の情報。
@@ -33,46 +33,10 @@ export function useWorkScope(): WorkScope {
  * 編集中に解除されると直前の入力は保存できず端末に退避されたまま残るので、控えられるように見せてから消す
  */
 function Unavailable({ path }: { path: string }) {
-  const [unsaved, setUnsaved] = useState<ReturnType<typeof backupsUnder>>([])
-  // 編集画面が外れるときの保存（退避の書き込み）は、この画面の描画より後に走るので、その後で読む
-  useEffect(() => {
-    const t = setTimeout(() => setUnsaved(backupsUnder(path)))
-    return () => clearTimeout(t)
-  }, [path])
-  const [copied, setCopied] = useState('')
-  const copy = async (p: string, text: string) => {
-    try {
-      await navigator.clipboard.writeText(text)
-      setCopied(p)
-    } catch {
-      alert('コピーできませんでした')
-    }
-  }
   return (
     <div className="page center">
       <p>この作品は見つからないか、共有が解除されています。</p>
-      {unsaved.length > 0 && (
-        <div className="problem-banner" role="alert">
-          <p>保存できなかった編集内容がこの端末に残っています。必要ならコピーして控えてください。</p>
-          <div className="problem-actions">
-            {unsaved.map((u) => (
-              <button key={u.path} onClick={() => copy(u.path, `${u.title}\n\n${u.body}`)}>
-                {copied === u.path ? 'コピーしました' : `「${u.title || '無題'}」をコピー`}
-              </button>
-            ))}
-            <button
-              className="danger"
-              onClick={() => {
-                if (!confirm('保存できなかった編集内容を捨てます。')) return
-                removeBackupsUnder(path)
-                setUnsaved([])
-              }}
-            >
-              捨てる
-            </button>
-          </div>
-        </div>
-      )}
+      <UnsavedBackups path={path} />
       <Link to="/">作品一覧へ</Link>
     </div>
   )

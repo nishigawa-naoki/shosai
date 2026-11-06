@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { isFullySynced, logOut, useAuth } from '../lib/auth'
+import UnsavedBackups from './UnsavedBackups'
 
 /** 以前の URL。ここで開いたときだけ、新しい URL への移動を案内する */
 const OLD_HOSTS = ['novel-editor-c94e8.web.app', 'novel-editor-c94e8.firebaseapp.com']
@@ -14,6 +15,8 @@ export default function MovedNotice() {
   const { user } = useAuth()
   const [hidden, setHidden] = useState(false)
   const [checking, setChecking] = useState(false)
+  // 未同期で止まったときに、保存できなかった編集内容（元の画面を開けないものも含む）を見せる
+  const [showUnsaved, setShowUnsaved] = useState(false)
   if (hidden || !OLD_HOSTS.includes(location.hostname)) return null
 
   const move = async () => {
@@ -21,8 +24,9 @@ export default function MovedNotice() {
     try {
       if (!(await isFullySynced())) {
         alert(
-          'この端末に、まだサーバーに保存できていない変更があります。\nオンラインの状態で、編集した画面を開いて「同期済み」になってから、もう一度押してください。',
+          'この端末に、まだサーバーに保存できていない変更があります。\nオンラインの状態で、編集した画面を開いて「同期済み」になってから、もう一度押してください。\n（元の画面を開けない変更は、案内の下に表示します。控えるか捨ててください）',
         )
+        setShowUnsaved(true)
         return
       }
       // 移った後は古い URL を使わないので、原稿のコピーとログイン状態を消してから移るかを選んでもらう
@@ -63,6 +67,8 @@ export default function MovedNotice() {
           {checking ? '確認中…' : '新しい URL へ移る'}
         </button>
       </div>
+      {/* 'users' の下＝この端末に残っているすべての退避 */}
+      {showUnsaved && <UnsavedBackups path="users" />}
     </div>
   )
 }
