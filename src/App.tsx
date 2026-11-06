@@ -2,6 +2,7 @@ import { lazy, Suspense, useState } from 'react'
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import ChunkErrorBoundary from './components/ChunkErrorBoundary'
 import Icon from './components/Icon'
+import MovedNotice from './components/MovedNotice'
 import { AuthProvider, signIn, useAuth } from './lib/auth'
 import { WorkScopeRoute } from './lib/workScope'
 import WorkPage from './pages/WorkPage'
@@ -18,6 +19,7 @@ function Login() {
   const [error, setError] = useState('')
   return (
     <div className="login">
+      <MovedNotice />
       <div className="login-card">
         <span className="login-mark">
           <Icon name="feather" size={28} />

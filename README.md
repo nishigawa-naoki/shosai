@@ -3,7 +3,7 @@
 スマホと PC のどちらからでも書ける、個人向けの執筆 PWA。小説を中心に、文章を書くこと全般に使える。React + TypeScript + CodeMirror 6 + Firebase。
 
 - Repository: https://github.com/nishigawa-naoki/shosai
-- Production: https://novel-editor-c94e8.web.app
+- Production: https://shosai-app.web.app
   - ログインできるのは許可リストに登録した Google アカウントだけ。それ以外のアカウントでは「利用できません」と表示される
 
 自分が日常的に使う道具として作り、実際にスマホと PC を行き来しながら執筆に使っている。
@@ -171,6 +171,12 @@ firebase deploy --only firestore            # ルール・索引（デプロイ�
 
 PWA は各端末で旧版のアプリがしばらく動き続ける。旧版が満たせない条件をルールに足すときは、
 アプリを先に公開し、全端末が新版になってからルールを公開する。
+
+アプリは2つのサイトに同じものを公開している（`firebase.json` の `hosting`）。
+
+- `shosai-app`：現在の URL（https://shosai-app.web.app）
+- `novel-editor-c94e8`：以前の URL。開くと新しい URL への移動を案内する。
+  端末内の未同期の変更は URL ごとに別なので、全端末が移り終えるまではアプリとして使えるまま残す
 
 ## 自分の環境に立てる場合
 

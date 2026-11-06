@@ -1484,3 +1484,35 @@ input.switch:disabled {
 .modal-actions .modal-delete {
   margin-right: auto;
 }
+
+/* ---------- URL の移動の案内 ---------- */
+
+.login {
+  flex-direction: column;
+  gap: 16px;
+}
+.moved-notice {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto 20px;
+  padding: 14px 16px;
+  background: var(--accent-soft);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+}
+.login .moved-notice {
+  margin-bottom: 0;
+}
+.moved-notice p {
+  margin: 0 0 8px;
+}
+.moved-notice a {
+  color: var(--accent);
+  font-weight: 600;
+}
+.moved-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}

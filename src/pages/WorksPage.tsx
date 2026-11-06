@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Icon from '../components/Icon'
+import MovedNotice from '../components/MovedNotice'
 import PromptDialog from '../components/PromptDialog'
 import { logOut, useAuth, useUid } from '../lib/auth'
 import { createWork, roleOf, SHARE_ROLE_LABEL, useCollection, useSharedWorks, worksPath, type Work } from '../lib/db'
@@ -48,6 +49,7 @@ export default function WorksPage() {
 
   return (
     <div className="page">
+      <MovedNotice />
       {adding && (
         <PromptDialog
           title="新しい作品"

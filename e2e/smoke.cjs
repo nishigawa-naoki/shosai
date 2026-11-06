@@ -2,7 +2,7 @@
 // node e2e/smoke.cjs [URL]
 const { launch } = require('./browser.cjs')
 
-const URL = process.argv[2] ?? 'https://novel-editor-c94e8.web.app/'
+const URL = process.argv[2] ?? 'https://shosai-app.web.app/'
 
 ;(async () => {
   const browser = await launch()
